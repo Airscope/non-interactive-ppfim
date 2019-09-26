@@ -1,0 +1,11 @@
+/cmake-build-debug
+/.idea
+/bin
+/log
+/build
+
+*.o
+*.data
+*.log
+*.dir
+
