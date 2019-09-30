@@ -44,7 +44,7 @@ int main() {
     int test_times = 5; // Test each protocol 5 times
 
     std::vector<int> trans_num = {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000};
-    std::vector<int> items_num = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
+    std::vector<int> items_num = {10, 20, 30, 40, 50, 60, 70};
 
     for (auto m : trans_num) {
 

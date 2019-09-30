@@ -56,6 +56,7 @@ namespace ppfim {
         delete_gate_bootstrapping_ciphertext(tmp);
     }
 
+    // Time complexity: O(length * length)
     void secure_compare(LweSample *result,
                         const LweSample *lhs,
                         const LweSample *rhs,
@@ -78,6 +79,56 @@ namespace ppfim {
         delete_gate_bootstrapping_ciphertext(tmp);
         delete_gate_bootstrapping_ciphertext(tmp2);
     }
+
+    // Time complexity: O(length)
+    void fast_secure_compare(LweSample *result,
+                             const LweSample *lhs,
+                             const LweSample *rhs,
+                             const int length,
+                             const TFheGateBootstrappingCloudKeySet *cloud_key) {
+        
+        LweSample *aux = new_gate_bootstrapping_ciphertext_array(length, cloud_key->params);
+        LweSample *aux2 = new_gate_bootstrapping_ciphertext_array(length, cloud_key->params);
+        LweSample *tmp = new_gate_bootstrapping_ciphertext(cloud_key->params);
+        LweSample *tmp2 = new_gate_bootstrapping_ciphertext(cloud_key->params);
+        
+        for (int i = length - 1; i >= 0; --i) {
+            bootsXNOR(&aux[i], &lhs[i], &rhs[i], cloud_key);
+        }
+        bootsCOPY(tmp, &aux[0], cloud_key);
+        bootsCONSTANT(&aux[0], 1, cloud_key);
+        for (int i = 1; i < length; ++ i) {
+            bootsCOPY(tmp2, &aux[i], cloud_key);
+            bootsAND(&aux[i], &aux[i-1], tmp, cloud_key);
+            bootsCOPY(tmp, tmp2, cloud_key);
+        }
+        for (int i = 0; i < length; ++i) {
+            bootsANDNY(&aux2[i], &lhs[i], &rhs[i], cloud_key); // (not x) and y
+            bootsAND(&aux2[i], &aux2[i], &aux[i], cloud_key);
+
+            // Incorrect code, these make this function get lhs <= rhs
+            // bootsORNY(&aux2[i], &lhs[i], &rhs[i], cloud_key); // (not x) or y
+            // bootsORYN(&aux2[i], &aux2[i], &aux[i], cloud_key); // x or (not y)
+        }
+        
+        // Incorrect also
+        // bootsCONSTANT(result, 1, cloud_key);
+
+        bootsCONSTANT(result, 0, cloud_key);
+
+        for (int i = 0; i < length; ++i) {
+            // Incorrect
+            // bootsAND(result, result, &aux2[i], cloud_key);
+
+            bootsOR(result, result, &aux2[i], cloud_key);
+        }
+
+        delete_gate_bootstrapping_ciphertext_array(length, aux);
+        delete_gate_bootstrapping_ciphertext_array(length, aux2);
+        delete_gate_bootstrapping_ciphertext(tmp);
+        delete_gate_bootstrapping_ciphertext(tmp2);
+    }
+
 
     void freq_itemset_mining_first(LweSample *result,
                                    const std::vector<LweSample *> &ctxt_data_matrix,

@@ -1,0 +1,6 @@
+/home/chenziyan/ppfim_tfhe/ppfim_tfhe/CMakeFiles/rebuild_cache.dir
+/home/chenziyan/ppfim_tfhe/ppfim_tfhe/CMakeFiles/edit_cache.dir
+/home/chenziyan/ppfim_tfhe/ppfim_tfhe/CMakeFiles/test_miner.dir
+/home/chenziyan/ppfim_tfhe/ppfim_tfhe/CMakeFiles/test_user.dir
+/home/chenziyan/ppfim_tfhe/ppfim_tfhe/CMakeFiles/test_cloud.dir
+/home/chenziyan/ppfim_tfhe/ppfim_tfhe/CMakeFiles/test_performance.dir
