@@ -232,17 +232,56 @@ void test_secure_compare(const TFheGateBootstrappingSecretKeySet *secret_key,
 
         int ptxt_cmp_result = bootsSymDecrypt(cmp_result, secret_key);
         int fast_ptxt_cmp_result = bootsSymDecrypt(fast_cmp_result, secret_key);
-        
+
         //std::cout <<  dec_num1  << "<" << dec_num2 << "? " 
         //          << ptxt_cmp_result << ", " << fast_ptxt_cmp_result << std::endl; 
-        
+
         test_result &= ((ptxt_cmp_result == (dec_num1 < dec_num2))
-                & (ptxt_cmp_result == fast_ptxt_cmp_result));
+                        & (ptxt_cmp_result == fast_ptxt_cmp_result));
 
         delete_gate_bootstrapping_ciphertext(cmp_result);
         delete_gate_bootstrapping_ciphertext(fast_cmp_result);
         delete_gate_bootstrapping_ciphertext_array(length, ctxt_num1);
         delete_gate_bootstrapping_ciphertext_array(length, ctxt_num2);
+    }
+
+    std::cout << (test_result ? "PASS" : "FAIL") << std::endl;
+}
+
+void test_secure_add(const TFheGateBootstrappingSecretKeySet *secret_key,
+                     const TFheGateBootstrappingCloudKeySet *cloud_key) {
+    int test_times = 20;
+    std::cout << "Test secure add algorithm " << test_times << " times...\n";
+    bool test_result = true;
+    int length = 20;
+    for (int i = 0; i < test_times; ++i) {
+        int dec_num1 = rand() % 100000 + 1;
+        int dec_num2 = rand() % 100000 + 1;
+        auto bin_num1 = ppfim::dec_to_bin(dec_num1, length);
+        auto bin_num2 = ppfim::dec_to_bin(dec_num2, length);
+        std::vector<int> decrypted(length);
+
+        LweSample *ctxt_num1 = new_gate_bootstrapping_ciphertext_array(length, cloud_key->params);
+        LweSample *ctxt_num2 = new_gate_bootstrapping_ciphertext_array(length, cloud_key->params);
+        LweSample *ctxt_add = new_gate_bootstrapping_ciphertext_array(length, cloud_key->params);
+
+        for (int j = 0; j < length; ++j) {
+            bootsSymEncrypt(&ctxt_num1[j], bin_num1[j], secret_key);
+            bootsSymEncrypt(&ctxt_num2[j], bin_num2[j], secret_key);
+        }
+
+        ppfim::secure_add(ctxt_add, ctxt_num1, ctxt_num2, length, cloud_key);
+        for (int j = 0; j < length; ++j) {
+            decrypted[j] = bootsSymDecrypt(&ctxt_add[j], secret_key);
+        }
+        int sum = ppfim::bin_to_dec(decrypted);
+
+        std::cout << dec_num1 << " + " << dec_num2 << "? " << sum << std::endl;
+        test_result &= (sum == dec_num1 + dec_num2);
+
+        delete_gate_bootstrapping_ciphertext_array(length, ctxt_num1);
+        delete_gate_bootstrapping_ciphertext_array(length, ctxt_num2);
+        delete_gate_bootstrapping_ciphertext_array(length, ctxt_add);
     }
 
     std::cout << (test_result ? "PASS" : "FAIL") << std::endl;
@@ -363,6 +402,7 @@ void test_all() {
     test_somewhat_secure_subset_testing(secret_key, &(secret_key->cloud));
     test_secure_count(secret_key, &(secret_key->cloud));
     test_secure_compare(secret_key, &(secret_key->cloud));
+    test_secure_add(secret_key, &(secret_key->cloud));
     test_freq_itemset_mining(secret_key, &(secret_key->cloud));
 }
 

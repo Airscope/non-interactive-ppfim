@@ -32,12 +32,18 @@ namespace ppfim {
                         const LweSample *rhs,
                         int length,
                         const TFheGateBootstrappingCloudKeySet *cloud_key);
-    
+
     void fast_secure_compare(LweSample *result,
-                        const LweSample *lhs,
-                        const LweSample *rhs,
-                        int length,
-                        const TFheGateBootstrappingCloudKeySet *cloud_key);
+                             const LweSample *lhs,
+                             const LweSample *rhs,
+                             int length,
+                             const TFheGateBootstrappingCloudKeySet *cloud_key);
+
+    void secure_add(LweSample *result,
+                    const LweSample *lhs,
+                    const LweSample *rhs,
+                    int length,
+                    const TFheGateBootstrappingCloudKeySet *cloud_key);
 
     void freq_itemset_mining_first(LweSample *result,
                                    const std::vector<LweSample *> &ctxt_data_matrix,

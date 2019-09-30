@@ -1,7 +1,6 @@
 //
 // Created by z1y on 2019/9/25.
 //
-#include <cassert>
 #include <cmath>
 
 #include "cloud.h"
@@ -86,20 +85,20 @@ namespace ppfim {
                              const LweSample *rhs,
                              const int length,
                              const TFheGateBootstrappingCloudKeySet *cloud_key) {
-        
+
         LweSample *aux = new_gate_bootstrapping_ciphertext_array(length, cloud_key->params);
         LweSample *aux2 = new_gate_bootstrapping_ciphertext_array(length, cloud_key->params);
         LweSample *tmp = new_gate_bootstrapping_ciphertext(cloud_key->params);
         LweSample *tmp2 = new_gate_bootstrapping_ciphertext(cloud_key->params);
-        
+
         for (int i = length - 1; i >= 0; --i) {
             bootsXNOR(&aux[i], &lhs[i], &rhs[i], cloud_key);
         }
         bootsCOPY(tmp, &aux[0], cloud_key);
         bootsCONSTANT(&aux[0], 1, cloud_key);
-        for (int i = 1; i < length; ++ i) {
+        for (int i = 1; i < length; ++i) {
             bootsCOPY(tmp2, &aux[i], cloud_key);
-            bootsAND(&aux[i], &aux[i-1], tmp, cloud_key);
+            bootsAND(&aux[i], &aux[i - 1], tmp, cloud_key);
             bootsCOPY(tmp, tmp2, cloud_key);
         }
         for (int i = 0; i < length; ++i) {
@@ -110,7 +109,7 @@ namespace ppfim {
             // bootsORNY(&aux2[i], &lhs[i], &rhs[i], cloud_key); // (not x) or y
             // bootsORYN(&aux2[i], &aux2[i], &aux[i], cloud_key); // x or (not y)
         }
-        
+
         // Incorrect also
         // bootsCONSTANT(result, 1, cloud_key);
 
@@ -129,11 +128,37 @@ namespace ppfim {
         delete_gate_bootstrapping_ciphertext(tmp2);
     }
 
+    void secure_add(LweSample *result,
+                    const LweSample *lhs,
+                    const LweSample *rhs,
+                    int length,
+                    const TFheGateBootstrappingCloudKeySet *cloud_key) {
+        LweSample *carry = new_gate_bootstrapping_ciphertext(cloud_key->params);
+        LweSample *tmp = new_gate_bootstrapping_ciphertext(cloud_key->params);
+        LweSample *tmp2 = new_gate_bootstrapping_ciphertext(cloud_key->params);
+        LweSample *tmp3 = new_gate_bootstrapping_ciphertext(cloud_key->params);
+
+        bootsCONSTANT(carry, 0, cloud_key);
+        for (int i = length - 1; i >= 0; --i) {
+            bootsXOR(&result[i], &lhs[i], &rhs[i], cloud_key);
+            bootsXOR(&result[i], &result[i], carry, cloud_key);
+            bootsAND(tmp, &lhs[i], &rhs[i], cloud_key);
+            bootsAND(tmp2, carry, &rhs[i], cloud_key);
+            bootsAND(tmp3, &lhs[i], carry, cloud_key);
+            bootsOR(carry, tmp, tmp2, cloud_key);
+            bootsOR(carry, carry, tmp3, cloud_key);
+        }
+
+        delete_gate_bootstrapping_ciphertext(carry);
+        delete_gate_bootstrapping_ciphertext(tmp);
+        delete_gate_bootstrapping_ciphertext(tmp2);
+        delete_gate_bootstrapping_ciphertext(tmp3);
+    }
 
     void freq_itemset_mining_first(LweSample *result,
                                    const std::vector<LweSample *> &ctxt_data_matrix,
-                                   const int rows,
-                                   const int cols,
+                                   int rows,
+                                   int cols,
                                    const LweSample *ctxt_query,
                                    const LweSample *ctxt_min_supp_count,
                                    const TFheGateBootstrappingCloudKeySet *cloud_key) {
@@ -158,8 +183,8 @@ namespace ppfim {
 
     void freq_itemset_mining_second(LweSample *result,
                                     const std::vector<LweSample *> &ctxt_data_matrix,
-                                    const int rows,
-                                    const int cols,
+                                    int rows,
+                                    int cols,
                                     const std::vector<int> &ptxt_query,
                                     const LweSample *ctxt_min_supp_count,
                                     const TFheGateBootstrappingCloudKeySet *cloud_key) {
