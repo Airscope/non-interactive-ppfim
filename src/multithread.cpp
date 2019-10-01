@@ -87,6 +87,9 @@ namespace ppfim {
         std::vector<LweSample *> counters(thread_num);
         for (int i = 0; i < thread_num; ++i) {
             counters[i] = new_gate_bootstrapping_ciphertext_array(counter_length, cloud_key->params);
+            for (int j = 0; j < counter_length; ++ j) {
+                bootsCONSTANT(&counters[i][j], 0, cloud_key);
+            }
         }
         offset ofs;
         for (int i = 0; i < thread_num; ++i) {
@@ -122,6 +125,9 @@ namespace ppfim {
         std::vector<LweSample *> counters(thread_num);
         for (int i = 0; i < thread_num; ++i) {
             counters[i] = new_gate_bootstrapping_ciphertext_array(counter_length, cloud_key->params);
+            for (int j = 0; j < counter_length; ++ j) {
+                bootsCONSTANT(&counters[i][j], 0, cloud_key);
+            }
         }
         offset ofs;
         for (int i = 0; i < thread_num; ++i) {
