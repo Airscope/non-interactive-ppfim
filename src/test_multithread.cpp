@@ -13,7 +13,7 @@
 #include <chrono>
 #include <thread>
 
-#include "cloud.h"
+#include "multithread.h"
 #include "user.h"
 #include "miner.h"
 
@@ -46,44 +46,41 @@ int main() {
 
     std::string file_name = "../dataset_chess.txt";
     const double min_supp = 0.8;
+
     int test_times = 5; // Test each protocol 5 times
-
-    std::vector<int> trans_num = {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000};
-    std::vector<int> items_num = {10, 20, 30, 40, 50, 60, 70};
-
     const int m = 1000;
-    const int n = 20;
-    const int kThreadsNum = 4;
+    const int n = 20; // n must be larger than 9 (n>9), otherwise segment fault, but why?
+    const int kCPUCores = 12;
     const int k = floor(log2(m)) + 1;
 
+    std::cout << "Trans Number: " << m << ", Items Number: " << n << std::endl;
 
-    for (auto m : trans_num) {
+    // Load data matrix from disk
+    auto data_matrix = ppfim::load_data(file_name, m, n);
 
-        int n = 20;
+    // Encrypt data matrix
+    std::vector<LweSample *> ctxt_data_matrix(m);
+    for (int i = 0; i < m; ++i) {
+        ctxt_data_matrix[i] = new_gate_bootstrapping_ciphertext_array(n, cloud_key->params);
+    }
+    ppfim::encrypt_data(ctxt_data_matrix, m, n, data_matrix, secret_key);
 
-        std::cout << "Trans Number: " << m << ", Items Number: " << n << std::endl;
+    // Get a ciphertext minimum support count
+    LweSample *ctxt_min_supp_count = new_gate_bootstrapping_ciphertext_array(k, cloud_key->params);
+    ppfim::ctxt_min_supp_count(ctxt_min_supp_count, k, static_cast<int>(m * min_supp), secret_key);
 
-        // Load data matrix from disk
-        auto data_matrix = ppfim::load_data(file_name, m, n);
+    // Get the ciphertext and the plaintext query
+    auto ptxt_query = ppfim::plaintext_query(n);
+    LweSample *ctxt_query = new_gate_bootstrapping_ciphertext_array(n, cloud_key->params);
+    ppfim::ciphertext_query(ctxt_query, n, secret_key);
 
-        // Encrypt data matrix
-        std::vector<LweSample *> ctxt_data_matrix(m);
-        for (int i = 0; i < m; ++i) {
-            ctxt_data_matrix[i] = new_gate_bootstrapping_ciphertext_array(n, cloud_key->params);
-        }
-        ppfim::encrypt_data(ctxt_data_matrix, m, n, data_matrix, secret_key);
+    // Allocate memory for the mining result;
+    LweSample *mining_result = new_gate_bootstrapping_ciphertext(cloud_key->params);
 
-        // Get a ciphertext minimum support count
-        LweSample *ctxt_min_supp_count = new_gate_bootstrapping_ciphertext_array(k, cloud_key->params);
-        ppfim::ctxt_min_supp_count(ctxt_min_supp_count, k, static_cast<int>(m * min_supp), secret_key);
 
-        // Get the ciphertext and the plaintext query
-        auto ptxt_query = ppfim::plaintext_query(n);
-        LweSample *ctxt_query = new_gate_bootstrapping_ciphertext_array(n, cloud_key->params);
-        ppfim::ciphertext_query(ctxt_query, n, secret_key);
+    for (int thread_num = 2; thread_num <= kCPUCores; ++thread_num) {
 
-        // Allocate memory for the mining result;
-        LweSample *mining_result = new_gate_bootstrapping_ciphertext(cloud_key->params);
+        std::cout << "Threads Number: " << thread_num << std::endl;
 
         std::chrono::high_resolution_clock::time_point time_start, time_finish;
         std::vector<std::chrono::milliseconds> time_diffs_p1;
@@ -93,17 +90,18 @@ int main() {
 
             // Test protocol 1's performance
             time_start = std::chrono::high_resolution_clock::now();
-            ppfim::freq_itemset_mining_first(mining_result, ctxt_data_matrix, m, n, ctxt_query, ctxt_min_supp_count,
-                                             cloud_key);
+            ppfim::parallel_freq_itemset_mining_first(mining_result, thread_num, ctxt_data_matrix, m, ctxt_query,
+                                                      ctxt_min_supp_count, k, cloud_key);
             time_finish = std::chrono::high_resolution_clock::now();
             time_diffs_p1.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(time_finish - time_start));
 
             // Test protocol 2's performance
             time_start = std::chrono::high_resolution_clock::now();
-            ppfim::freq_itemset_mining_second(mining_result, ctxt_data_matrix, m, n, ptxt_query, ctxt_min_supp_count,
-                                              cloud_key);
+            ppfim::parallel_freq_itemset_mining_second(mining_result, thread_num, ctxt_data_matrix, m, ptxt_query,
+                                                       ctxt_min_supp_count, k, cloud_key);
             time_finish = std::chrono::high_resolution_clock::now();
             time_diffs_p2.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(time_finish - time_start));
+
         }
 
         // Print info
@@ -112,15 +110,17 @@ int main() {
 
         std::cout << "Protocol 2 time used: ";
         print(time_diffs_p2);
-
-        // Clean up all pointers
-        for (int i = 0; i < m; ++i) {
-            delete_gate_bootstrapping_ciphertext_array(n, ctxt_data_matrix[i]);
-        }
-        delete_gate_bootstrapping_ciphertext_array(k, ctxt_min_supp_count);
-        delete_gate_bootstrapping_ciphertext_array(n, ctxt_query);
-        delete_gate_bootstrapping_ciphertext(mining_result);
     }
+
+
+    // Clean up all pointers
+    for (int i = 0; i < m; ++i) {
+        delete_gate_bootstrapping_ciphertext_array(n, ctxt_data_matrix[i]);
+    }
+    delete_gate_bootstrapping_ciphertext_array(k, ctxt_min_supp_count);
+    delete_gate_bootstrapping_ciphertext_array(n, ctxt_query);
+    delete_gate_bootstrapping_ciphertext(mining_result);
+
 
     return 0;
 }

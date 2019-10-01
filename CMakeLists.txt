@@ -3,7 +3,7 @@ project(ppfim)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_compile_options(-O3 -Wall)
+add_compile_options(-O0 -Wall -pthread)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
@@ -22,3 +22,8 @@ target_link_libraries(test_cloud tfhe-spqlios-fma)
 set(TEST_PERFORMANCE_SRC src/test_performance.cpp src/cloud.h src/cloud.cpp src/user.h src/user.cpp src/miner.h src/miner.cpp)
 add_executable(test_performance ${TEST_PERFORMANCE_SRC})
 target_link_libraries(test_performance tfhe-spqlios-fma)
+
+set(TEST_MULTITHREAD src/test_multithread.cpp src/multithread.h src/multithread.cpp src/user.h src/user.cpp src/miner.h src/miner.cpp
+        src/cloud.h src/cloud.cpp)
+add_executable(test_multithread ${TEST_MULTITHREAD})
+target_link_libraries(test_multithread tfhe-spqlios-fma pthread)

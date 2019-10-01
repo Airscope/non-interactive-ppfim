@@ -17,16 +17,18 @@ namespace ppfim {
 
     void worker_first(LweSample *ret,
                       int counter_length,
-                      std::vector<LweSample *>::iterator begin,
-                      std::vector<LweSample *>::iterator end,
+                      const std::vector<LweSample *> &ctxt_data_matrix,
+                      int index_begin,
+                      int index_end,
                       const LweSample *ctxt_query,
                       int query_length,
                       const TFheGateBootstrappingCloudKeySet *cloud_key);
 
     void worker_second(LweSample *ret,
                        int counter_length,
-                       std::vector<LweSample *>::iterator begin,
-                       std::vector<LweSample *>::iterator end,
+                       const std::vector<LweSample *> &ctxt_data_matrix,
+                       int index_begin,
+                       int index_end,
                        const std::vector<int> &ptxt_query,
                        int query_length,
                        const TFheGateBootstrappingCloudKeySet *cloud_key);
@@ -43,12 +45,19 @@ namespace ppfim {
                                             int thread_num,
                                             const std::vector<LweSample *> &ctxt_data_matrix,
                                             int rows,
-                                            int cols,
                                             const LweSample *ctxt_query,
                                             const LweSample *ctxt_min_supp_count,
                                             int counter_length,
                                             const TFheGateBootstrappingCloudKeySet *cloud_key);
 
+    void parallel_freq_itemset_mining_second(LweSample *result,
+                                             int thread_num,
+                                             const std::vector<LweSample *> &ctxt_data_matrix,
+                                             int rows,
+                                             const std::vector<int> &ptxt_query,
+                                             const LweSample *ctxt_min_supp_count,
+                                             int counter_length,
+                                             const TFheGateBootstrappingCloudKeySet *cloud_key);
 }
 
 
