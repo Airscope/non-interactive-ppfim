@@ -257,6 +257,7 @@ void test_secure_add(const TFheGateBootstrappingSecretKeySet *secret_key,
     for (int i = 0; i < test_times; ++i) {
         int dec_num1 = rand() % 100000 + 1;
         int dec_num2 = rand() % 100000 + 1;
+
         auto bin_num1 = ppfim::dec_to_bin(dec_num1, length);
         auto bin_num2 = ppfim::dec_to_bin(dec_num2, length);
         std::vector<int> decrypted(length);

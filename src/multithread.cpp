@@ -67,17 +67,27 @@ namespace ppfim {
                const TFheGateBootstrappingCloudKeySet *cloud_key) {
 
         LweSample *sum = new_gate_bootstrapping_ciphertext_array(counter_length, cloud_key->params);
+        LweSample *tmp = new_gate_bootstrapping_ciphertext_array(counter_length, cloud_key->params);
+        for (int i = 0; i < counter_length; ++i) {
+            bootsCONSTANT(&sum[i], 0, cloud_key);
+            bootsCONSTANT(&tmp[i], 0, cloud_key);
+        }
         for (size_t i = 0; i < counters.size(); ++i) {
-            secure_add(sum, sum, counters[i], counter_length, cloud_key);
+            secure_add(sum, tmp, counters[i], counter_length, cloud_key);
+            for (int j = 0; j < counter_length; ++j) {
+                bootsCOPY(&tmp[j], &sum[j], cloud_key);
+            }
         }
         secure_compare(ret, sum, ctxt_min_supp_count, counter_length, cloud_key);
         delete_gate_bootstrapping_ciphertext_array(counter_length, sum);
+        delete_gate_bootstrapping_ciphertext_array(counter_length, tmp);
     }
 
     void parallel_freq_itemset_mining_first(LweSample *result,
                                             int thread_num,
                                             const std::vector<LweSample *> &ctxt_data_matrix,
                                             int rows,
+                                            int cols,
                                             const LweSample *ctxt_query,
                                             const LweSample *ctxt_min_supp_count,
                                             int counter_length,
@@ -87,7 +97,7 @@ namespace ppfim {
         std::vector<LweSample *> counters(thread_num);
         for (int i = 0; i < thread_num; ++i) {
             counters[i] = new_gate_bootstrapping_ciphertext_array(counter_length, cloud_key->params);
-            for (int j = 0; j < counter_length; ++ j) {
+            for (int j = 0; j < counter_length; ++j) {
                 bootsCONSTANT(&counters[i][j], 0, cloud_key);
             }
         }
@@ -96,13 +106,12 @@ namespace ppfim {
             ofs = get_offset(rows, thread_num, i);
             threads[i] = std::thread([=, &counters]() {
                 worker_first(counters[i], counter_length, ctxt_data_matrix, ofs.begin, ofs.end, ctxt_query,
-                             counter_length, cloud_key);
+                             cols, cloud_key);
             });
         }
 
         for (auto &th : threads) {
-            if (th.joinable())
-                th.join();
+            th.join();
         }
 
         merge(result, counters, counter_length, ctxt_min_supp_count, cloud_key);
@@ -113,19 +122,20 @@ namespace ppfim {
     }
 
     void parallel_freq_itemset_mining_second(LweSample *result,
-                                            int thread_num,
-                                            const std::vector<LweSample *> &ctxt_data_matrix,
-                                            int rows,
-                                            const std::vector<int> &ptxt_query,
-                                            const LweSample *ctxt_min_supp_count,
-                                            int counter_length,
-                                            const TFheGateBootstrappingCloudKeySet *cloud_key) {
+                                             int thread_num,
+                                             const std::vector<LweSample *> &ctxt_data_matrix,
+                                             int rows,
+                                             int cols,
+                                             const std::vector<int> &ptxt_query,
+                                             const LweSample *ctxt_min_supp_count,
+                                             int counter_length,
+                                             const TFheGateBootstrappingCloudKeySet *cloud_key) {
 
         std::vector<std::thread> threads(thread_num);
         std::vector<LweSample *> counters(thread_num);
         for (int i = 0; i < thread_num; ++i) {
             counters[i] = new_gate_bootstrapping_ciphertext_array(counter_length, cloud_key->params);
-            for (int j = 0; j < counter_length; ++ j) {
+            for (int j = 0; j < counter_length; ++j) {
                 bootsCONSTANT(&counters[i][j], 0, cloud_key);
             }
         }
@@ -134,13 +144,12 @@ namespace ppfim {
             ofs = get_offset(rows, thread_num, i);
             threads[i] = std::thread([=, &counters]() {
                 worker_second(counters[i], counter_length, ctxt_data_matrix, ofs.begin, ofs.end, ptxt_query,
-                             counter_length, cloud_key);
+                              cols, cloud_key);
             });
         }
 
         for (auto &th : threads) {
-            if (th.joinable())
-                th.join();
+            th.join();
         }
 
         merge(result, counters, counter_length, ctxt_min_supp_count, cloud_key);
@@ -149,4 +158,4 @@ namespace ppfim {
             delete_gate_bootstrapping_ciphertext_array(counter_length, counters[i]);
         }
     }
-}
+} // namespace ppfim

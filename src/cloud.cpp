@@ -128,6 +128,7 @@ namespace ppfim {
         delete_gate_bootstrapping_ciphertext(tmp2);
     }
 
+    // Note that if result == lhs or result == rhs, it will lead to errors
     void secure_add(LweSample *result,
                     const LweSample *lhs,
                     const LweSample *rhs,
